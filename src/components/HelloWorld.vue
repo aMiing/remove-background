@@ -5,7 +5,7 @@
       :src="originImg"
       alt=""
       @load="loadImg"
-      :style="'left:' + -imgWidth + 'px'"
+      :style="'left:' + -imgWidth + 'px;top:'+ -imgHeight + 'px'"
     />
     <div class="header"></div>
     <div class="canvas-content">
@@ -72,6 +72,8 @@
           <el-button size="small" type="primary" @click="downloadPng"
             >下载图片</el-button
           >
+          <el-button size="small" type="primary" @click="resetImgData">重置</el-button>
+          <el-button size="small" type="primary" @click="undo">后退</el-button>
         </div>
       </div>
     </div>
@@ -93,10 +95,13 @@ export default {
       transCtx: null,
       selectedColor: [],
       imgWidth: 400,
+      imgHeight: 400,
       imageData: {},
       toColor: "rgba(0, 0, 0, 0)",
       originImg: "",
       loadFileName: "",
+      imgStock: [],
+      index: 0,
     };
   },
   computed: {
@@ -117,6 +122,7 @@ export default {
       const width = img.offsetWidth;
       const height = img.offsetHeight;
       this.imgWidth = width;
+      this.imgHeight= height;
       this.canHeight = (height / width) * this.canWidth;
       setTimeout(() => {
         this.originCtx = this.$refs.originCan.getContext("2d");
@@ -132,7 +138,22 @@ export default {
           this.canWidth,
           this.canHeight
         );
+        this.addStock(this.imageData)
+        
+
       }, 0);
+    },
+    addStock(data) {
+      if(this.imgStock.length > 9) {
+        this.imgStock.pop()
+      }
+      this.imgStock.unshift(JSON.stringify(data))
+    },
+    undo() {
+      ++this.index;
+      this.imageData = JSON.parse(this.imgStock[this.index])
+      console.log('this.imageData', this.imageData)
+      // this.transCtx.putImageData(this.imageData, 0, 0);
     },
     // 图片数据转化
     handleTrans(mode = "replace") {
@@ -165,6 +186,7 @@ export default {
         this.canWidth,
         this.canHeight
       );
+      this.addStock(this.imageData)
     },
     // 点击位置的颜色值
     pickPoint(e) {
@@ -231,6 +253,15 @@ export default {
       save_link.download = "download.png";
       save_link.click();
     },
+    resetImgData() {
+        this.imageData = this.originCtx.getImageData(
+          0,
+          0,
+          this.canWidth,
+          this.canHeight
+        );
+        this.transCtx.clearRect(0, 0, this.canWidth, this.canHeight)
+    }
   },
 };
 </script>
@@ -258,6 +289,7 @@ export default {
     flex: 170px 0 0;
     text-align: left;
     padding: 6px 24px;
+    justify-content: center;
     .replace-btn {
       vertical-align: top;
       margin: 0 6px;
