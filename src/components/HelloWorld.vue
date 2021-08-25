@@ -1,86 +1,79 @@
-<template>
-  <div class="main">
-    <img
-      id="imgDemo"
-      :src="originImg"
-      alt=""
-      @load="loadImg"
-      :style="'left:' + -imgWidth + 'px;top:' + -imgHeight + 'px'"
-    />
-    <div class="header"></div>
-    <div class="canvas-content">
-      <div class="origin-box">
-        <canvas
-          ref="originCan"
-          id="beforeCan"
-          :width="canWidth"
+<template lang="pug">
+.main
+  img#imgDemo(
+    :src="originImg",
+    alt="",
+    @load="loadImg",
+    :style="'left:' + -imgWidth + 'px;top:' + -imgHeight + 'px'"
+  )
+  .canvas-content
+    el-col.origin-box(
+      :xs="24",
+      :sm="24",
+      :md="12",
+      :lg="{ span: 8, offset: 2 }",
+      :xl="{ span: 8, offset: 2 }"
+    )
+      .origin-canvas-content(
+        ref="originCanvasContent",
+        :style="'width:' + canWidth + 'px'"
+      )
+        canvas#beforeCan(
+          ref="originCan",
+          :width="canWidth",
           :height="canHeight"
-        ></canvas>
-        <canvas
-          ref="layerCan"
-          id="layer"
-          :width="canWidth"
-          :height="canHeight"
+        )
+        canvas#layer(
+          ref="layerCan",
+          :width="canWidth",
+          :height="canHeight",
           @click="pickPoint"
-        ></canvas>
-
-        <el-upload
-          ref="logoUpload"
-          class="avatar-uploader"
-          action="http://localhost:3000/api/upload/uploadImg"
-          :show-file-list="false"
-          :on-success="handleAvatarSuccess"
+        )
+        el-upload.avatar-uploader(
+          ref="logoUpload",
+          action="http://localhost:3000/api/upload/uploadImg",
+          :show-file-list="false",
+          :on-success="handleAvatarSuccess",
           :before-upload="beforeAvatarUpload"
-        >
-          <el-button size="small" type="primary">点击上传</el-button>
-        </el-upload>
-      </div>
-      <div class="opereation-box">
-        <div class="removeColor">
-          <h3>清除颜色：</h3>
-          <el-button @click="handleTrans('remove')" :disabled="!fromColor"
-            >清除</el-button
-          >
-        </div>
-        <div class="replace-color">
-          <h3>颜色替换：</h3>
-          <el-color-picker
-            v-model="fromColor"
-            :show-alpha="true"
-          ></el-color-picker>
-          <el-button
-            class="replace-btn"
-            @click="() => handleTrans()"
-            :disabled="!fromColor"
-            >替换</el-button
-          >
-          <el-color-picker
-            v-model="toColor"
-            :show-alpha="true"
-          ></el-color-picker>
-        </div>
-      </div>
-      <div class="trans-box">
-        <canvas
-          ref="transCan"
-          id="transCan"
-          :width="canWidth"
-          :height="canHeight"
-          @click="pickPoint"
-        ></canvas>
-        <div class="box">
-          <el-button size="small" type="primary" @click="downloadPng"
-            >下载图片</el-button
-          >
-          <el-button size="small" type="primary" @click="resetImgData"
-            >重置</el-button
-          >
-          <el-button size="small" type="primary" @click="undo" :disabled="imgStock.length < 2 || index > 8">后退</el-button>
-          <el-button size="small" type="primary" @click="redo" :disabled="!index">前进</el-button>
-        </div>
-      </div>
-    </div>
-  </div>
+        )
+          el-button(size="small", type="primary") 点击上传
+
+    el-col.opereation-box(:xs="24", :sm="24", :md="12", :lg="4", :xl="4")
+      .removeColor
+        h3 清除颜色：
+        el-button(@click="handleTrans('remove')", :disabled="!fromColor") 清除
+
+      .replace-color
+        h3 颜色替换：
+        el-color-picker(v-model="fromColor", :show-alpha="true")
+        el-button.replace-btn(
+          @click="() => handleTrans()",
+          :disabled="!fromColor"
+        ) 替换
+        el-color-picker(v-model="toColor", :show-alpha="true")
+
+    el-col.trans-box(:xs="24", :sm="24", :md="12", :lg="8", :xl="8")
+      canvas#transCan(
+        ref="transCan",
+        :width="canWidth",
+        :height="canHeight",
+        @click="pickPoint"
+      )
+      .box
+        el-button(size="small", type="primary", @click="downloadPng") 下载图片
+        el-button(size="small", type="primary", @click="resetImgData") 重置
+        el-button(
+          size="small",
+          type="primary",
+          @click="undo",
+          :disabled="disUndo"
+        ) 后退
+        el-button(
+          size="small",
+          type="primary",
+          @click="redo",
+          :disabled="!index"
+        ) 前进
 </template>
 
 <script>
@@ -117,9 +110,17 @@ export default {
     transColor() {
       return this.toColor.split(/\(|\)/)[1].split(",");
     },
+    disUndo() {
+      return this.index >= this.imgStock.length - 1;
+    },
   },
   mounted() {
-    this.$nextTick(() => {});
+    this.$nextTick(() => {
+      this.canWidth = Math.min(
+        this.$refs.originCanvasContent.offsetWidth,
+        this.canWidth
+      );
+    });
   },
   methods: {
     // 图片加载完成
@@ -138,38 +139,37 @@ export default {
         this.originCtx.scale(this.canWidth / width, this.canWidth / width);
         this.originCtx.drawImage(img, 0, 0);
 
-        this.imageData = this.originCtx.getImageData(
-          0,
-          0,
-          this.canWidth,
-          this.canHeight
-        );
+        this.resetImgData();
       }, 0);
     },
     addStock(params) {
-      if(this.index){
-        // this.imgStock = this.imgStock.slice(this.index, )
+      if (this.index) {
+        this.imgStock = this.imgStock.slice(this.index);
         this.index = 0;
       }
-      if (this.imgStock.length > 1) {
+      if (this.imgStock.length >= 10) {
         this.imgStock.pop();
       }
       this.imgStock.unshift(JSON.stringify(params));
-      console.log(" this.imgStock", this.imgStock);
     },
     undo() {
       this.index++;
-      // const {mode, _fromColor, _toColor} = JSON.parse(this.imgStock[this.index])
-      // this.handleTrans(mode, _toColor, _fromColor, false)
-      // console.log('mode, _fromColor, _toColor', mode, _fromColor, _toColor)
-      // this.imageData = JSON.parse(this.imgStock[this.index])
-      // const imageData = this.transCtx.createImageData(this.canWidth,this.canHeight)
-      // imageData.data = JSON.parse(this.imgStock[this.index]).data
-      // console.info("imageData", imageData);
-      // this.transCtx.putImageData(imageData, 0, 0);
+      this.redrawImg();
     },
-    redo () {
-
+    redo() {
+      this.index--;
+      this.redrawImg();
+    },
+    redrawImg() {
+      const preImageData = JSON.parse(this.imgStock[this.index]).data;
+      this.imageData = this.transCtx.createImageData(
+        this.canWidth,
+        this.canHeight
+      );
+      for (let i = 0; i < this.imageData.data.length; i++) {
+        this.imageData.data[i] = preImageData[i];
+      }
+      this.transCtx.putImageData(this.imageData, 0, 0);
     },
     // 图片数据转化
     handleTrans(
@@ -179,7 +179,7 @@ export default {
       stock = true
     ) {
       const _toColor = mode === "remove" ? [0, 0, 0, 0] : toColor;
-      
+
       const data = this.imageData.data || [];
       console.time("no-worker");
       for (let i = 0; i < data.length; i += 4) {
@@ -192,8 +192,7 @@ export default {
         }
       }
       console.timeEnd("no-worker");
-      console.log('111,', this.imageData)
-      stock && this.addStock(this.imageData)
+      stock && this.addStock(this.imageData);
       this.transCtx.putImageData(this.imageData, 0, 0);
       this.imageData = this.transCtx.getImageData(
         0,
@@ -237,7 +236,6 @@ export default {
     },
 
     handleAvatarSuccess(res, file) {
-      console.log("res, file", res, file, file.response.filename);
       this.loadFileName = file.response.filename;
       this.originImg = URL.createObjectURL(file.raw);
     },
@@ -261,13 +259,16 @@ export default {
     },
     downloadPng() {
       const imgData = this.$refs.transCan.toDataURL("image/png");
-      console.log("imgdata", imgData);
       const save_link = document.createElement("a");
       save_link.href = imgData;
       save_link.download = "download.png";
       save_link.click();
     },
     resetImgData() {
+      this.imgStock = [];
+      this.index = 0;
+      this.selectedColor = this.$options.data().selectedColor;
+      this.toColor = this.$options.data().toColor;
       this.imageData = this.originCtx.getImageData(
         0,
         0,
@@ -275,6 +276,7 @@ export default {
         this.canHeight
       );
       this.transCtx.clearRect(0, 0, this.canWidth, this.canHeight);
+      this.addStock(this.imageData);
     },
   },
 };
@@ -282,11 +284,18 @@ export default {
 
 <style scoped lang="scss">
 .canvas-content {
-  display: flex;
-  justify-content: center;
+  .el-col {
+    padding: 6px;
+  }
+  canvas {
+    cursor: pointer;
+  }
   .origin-box {
     border: 1px solid red;
-    position: relative;
+    .origin-canvas-content {
+      position: relative;
+      margin: 0 auto;
+    }
     #layer {
       position: absolute;
       left: 0;
