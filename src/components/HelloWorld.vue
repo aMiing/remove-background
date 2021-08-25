@@ -5,7 +5,7 @@
       :src="originImg"
       alt=""
       @load="loadImg"
-      :style="'left:' + -imgWidth + 'px;top:'+ -imgHeight + 'px'"
+      :style="'left:' + -imgWidth + 'px;top:' + -imgHeight + 'px'"
     />
     <div class="header"></div>
     <div class="canvas-content">
@@ -50,7 +50,7 @@
           ></el-color-picker>
           <el-button
             class="replace-btn"
-            @click="handleTrans"
+            @click="() => handleTrans()"
             :disabled="!fromColor"
             >替换</el-button
           >
@@ -72,8 +72,11 @@
           <el-button size="small" type="primary" @click="downloadPng"
             >下载图片</el-button
           >
-          <el-button size="small" type="primary" @click="resetImgData">重置</el-button>
-          <el-button size="small" type="primary" @click="undo">后退</el-button>
+          <el-button size="small" type="primary" @click="resetImgData"
+            >重置</el-button
+          >
+          <el-button size="small" type="primary" @click="undo" :disabled="imgStock.length < 2 || index > 8">后退</el-button>
+          <el-button size="small" type="primary" @click="redo" :disabled="!index">前进</el-button>
         </div>
       </div>
     </div>
@@ -111,6 +114,9 @@ export default {
       });
       return res.length ? "rgba(" + res.join(",") + ")" : null;
     },
+    transColor() {
+      return this.toColor.split(/\(|\)/)[1].split(",");
+    },
   },
   mounted() {
     this.$nextTick(() => {});
@@ -122,7 +128,7 @@ export default {
       const width = img.offsetWidth;
       const height = img.offsetHeight;
       this.imgWidth = width;
-      this.imgHeight= height;
+      this.imgHeight = height;
       this.canHeight = (height / width) * this.canWidth;
       setTimeout(() => {
         this.originCtx = this.$refs.originCan.getContext("2d");
@@ -138,47 +144,56 @@ export default {
           this.canWidth,
           this.canHeight
         );
-        this.addStock(this.imageData)
-        
-
       }, 0);
     },
-    addStock(data) {
-      if(this.imgStock.length > 9) {
-        this.imgStock.pop()
+    addStock(params) {
+      if(this.index){
+        // this.imgStock = this.imgStock.slice(this.index, )
+        this.index = 0;
       }
-      this.imgStock.unshift(JSON.stringify(data))
+      if (this.imgStock.length > 1) {
+        this.imgStock.pop();
+      }
+      this.imgStock.unshift(JSON.stringify(params));
+      console.log(" this.imgStock", this.imgStock);
     },
     undo() {
-      ++this.index;
-      this.imageData = JSON.parse(this.imgStock[this.index])
-      console.log('this.imageData', this.imageData)
-      // this.transCtx.putImageData(this.imageData, 0, 0);
+      this.index++;
+      // const {mode, _fromColor, _toColor} = JSON.parse(this.imgStock[this.index])
+      // this.handleTrans(mode, _toColor, _fromColor, false)
+      // console.log('mode, _fromColor, _toColor', mode, _fromColor, _toColor)
+      // this.imageData = JSON.parse(this.imgStock[this.index])
+      // const imageData = this.transCtx.createImageData(this.canWidth,this.canHeight)
+      // imageData.data = JSON.parse(this.imgStock[this.index]).data
+      // console.info("imageData", imageData);
+      // this.transCtx.putImageData(imageData, 0, 0);
+    },
+    redo () {
+
     },
     // 图片数据转化
-    handleTrans(mode = "replace") {
-      this.toColor;
-      const _toColor = this.toColor.split(/\(|\)/)[1].split(",");
-      console.log(_toColor);
+    handleTrans(
+      mode = "replace",
+      _fromColor = this.selectedColor,
+      toColor = this.transColor,
+      stock = true
+    ) {
+      const _toColor = mode === "remove" ? [0, 0, 0, 0] : toColor;
+      
       const data = this.imageData.data || [];
       console.time("no-worker");
       for (let i = 0; i < data.length; i += 4) {
-        const similar = this.isSimilar(
-          this.selectedColor,
-          data.slice(i, i + 4)
-        );
+        const similar = this.isSimilar(_fromColor, data.slice(i, i + 4));
         if (similar) {
-          if (mode === "remove") {
-            data[i + 3] = 0;
-          } else {
-            data[i] = _toColor[0];
-            data[i + 1] = _toColor[1];
-            data[i + 2] = _toColor[2];
-            data[i + 3] = _toColor[3] * 255;
-          }
+          data[i] = _toColor[0];
+          data[i + 1] = _toColor[1];
+          data[i + 2] = _toColor[2];
+          data[i + 3] = _toColor[3] * 255;
         }
       }
       console.timeEnd("no-worker");
+      console.log('111,', this.imageData)
+      stock && this.addStock(this.imageData)
       this.transCtx.putImageData(this.imageData, 0, 0);
       this.imageData = this.transCtx.getImageData(
         0,
@@ -186,7 +201,6 @@ export default {
         this.canWidth,
         this.canHeight
       );
-      this.addStock(this.imageData)
     },
     // 点击位置的颜色值
     pickPoint(e) {
@@ -254,14 +268,14 @@ export default {
       save_link.click();
     },
     resetImgData() {
-        this.imageData = this.originCtx.getImageData(
-          0,
-          0,
-          this.canWidth,
-          this.canHeight
-        );
-        this.transCtx.clearRect(0, 0, this.canWidth, this.canHeight)
-    }
+      this.imageData = this.originCtx.getImageData(
+        0,
+        0,
+        this.canWidth,
+        this.canHeight
+      );
+      this.transCtx.clearRect(0, 0, this.canWidth, this.canHeight);
+    },
   },
 };
 </script>
