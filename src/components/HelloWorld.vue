@@ -2,12 +2,13 @@
 .main
   img#imgDemo(
     :src="originImg",
-    alt="",
     @load="loadImg",
     :style="'left:' + -imgWidth + 'px;top:' + -imgHeight + 'px'"
   )
+
   .canvas-content
     el-col.origin-box(
+      ref="originBox",
       :xs="24",
       :sm="24",
       :md="12",
@@ -31,10 +32,10 @@
         )
         el-upload.avatar-uploader(
           ref="logoUpload",
-          action="http://localhost:3000/api/upload/uploadImg",
-          :show-file-list="false",
-          :on-success="handleAvatarSuccess",
-          :before-upload="beforeAvatarUpload"
+          accept="image/*",
+          action="#",
+          :auto-upload="false",
+          :on-change="handleStatusChange"
         )
           el-button(size="small", type="primary") 点击上传
 
@@ -116,10 +117,8 @@ export default {
   },
   mounted() {
     this.$nextTick(() => {
-      this.canWidth = Math.min(
-        this.$refs.originCanvasContent.offsetWidth,
-        this.canWidth
-      );
+      const contentWidth = document.querySelector("#app").offsetWidth;
+      this.canWidth = Math.min(contentWidth - 12, this.canWidth);
     });
   },
   methods: {
@@ -235,28 +234,11 @@ export default {
       return true;
     },
 
-    handleAvatarSuccess(res, file) {
-      this.loadFileName = file.response.filename;
+    handleStatusChange(file) {
+      // console.log(file);
       this.originImg = URL.createObjectURL(file.raw);
     },
 
-    beforeAvatarUpload(file) {
-      const isImage = [
-        "image/jpeg",
-        "image/jpg",
-        "image/png",
-        "image/gif",
-      ].includes(file.type);
-      const isLt2M = file.size / 1024 / 1024 < 2;
-
-      if (!isImage) {
-        this.$message.error("上传头像必须是图片格式!");
-      }
-      if (!isLt2M) {
-        this.$message.error("上传头像图片大小不能超过 2MB!");
-      }
-      return isImage && isLt2M;
-    },
     downloadPng() {
       const imgData = this.$refs.transCan.toDataURL("image/png");
       const save_link = document.createElement("a");
@@ -283,7 +265,21 @@ export default {
 </script>
 
 <style scoped lang="scss">
+.main {
+  width: 100%;
+  // height: 100%;
+  // overflow: hidden;
+  position: absolute;
+  left: 0;
+  top: 0;
+}
 .canvas-content {
+  position: relative;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #ffffff;
   .el-col {
     padding: 6px;
   }
@@ -321,6 +317,7 @@ export default {
 }
 #imgDemo {
   position: absolute;
-  left: -400px;
+  top: 0;
+  left: 0;
 }
 </style>
